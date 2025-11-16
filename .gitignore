@@ -1,0 +1,62 @@
+# ==========================
+# Python Cache & Artifacts
+# ==========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ==========================
+# Jupyter Notebook Stuff
+# ==========================
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# ==========================
+# VSCode & Editor Config
+# ==========================
+.vscode/
+*.code-workspace
+
+# ==========================
+# Virtual Environments
+# ==========================
+venv/
+.venv/
+env/
+.env/
+
+# ==========================
+# System Files
+# ==========================
+.DS_Store
+*.swp
+Thumbs.db
+
+# ==========================
+# Logs
+# ==========================
+*.log
+
+# ==========================
+# Project: Data Folders
+# ==========================
+
+# Ignore ALL raw data
+00_data/raw/
+
+# Keep cleaned data (allowed)
+!00_data/clean/
+
+# Ignore large intermediate data files
+00_data/tmp/
+00_data/intermediate/
+
+# ==========================
+# Misc
+# ==========================
+*.zip
+*.gz
+*.tar
+*.pickle
+*.pkl
