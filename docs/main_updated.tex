@@ -1,0 +1,288 @@
+\documentclass[11pt]{article}
+
+% --------------------------------------------------
+% Packages
+% --------------------------------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{amsmath, amssymb}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+% --------------------------------------------------
+% Helpers (compile even if figure files are missing)
+% --------------------------------------------------
+\newcommand{\maybeincludegraphics}[2][]{%
+  \IfFileExists{#2}{\includegraphics[#1]{#2}}{%
+    \fbox{\parbox[c][0.22\textheight][c]{0.95\linewidth}{\centering Missing figure:\\\texttt{#2}}}%
+  }%
+}
+
+\setstretch{1.08}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+
+% --------------------------------------------------
+% Title
+% --------------------------------------------------
+\title{\vspace{-1.2cm}\textbf{\Large Estimating the Impact of Opioid Control Policies in Florida and Washington}\\[0.2cm]
+\large IDS 720: Practicing Data Science --- Opioids \\
+\large Final Report (4--6 page main text)}
+\author{\textbf{Straight As}\\[0.15cm]
+Arushi Singh \quad \quad Sung-Tse (Jay) Wu \quad \quad Yifei (Rosella) Zheng}
+\date{Fall 2025}
+
+\begin{document}
+\maketitle
+\vspace{-0.6cm}
+
+% --------------------------------------------------
+% Executive Summary
+% --------------------------------------------------
+\section{Executive Summary}
+
+\textbf{Stakeholder / audience.} This report is written for state public-health and policy stakeholders (e.g., health departments, regulators, and legislative staff) who need evidence on whether prescription-focused opioid policies are associated with meaningful reductions in opioid supply and overdose mortality.
+
+The U.S. opioid epidemic has evolved from widespread prescription opioid use in the 2000s to increasing harm from illicit opioids (including fentanyl) in the 2010s. Policymakers continue to weigh interventions aimed at reducing inappropriate prescribing while minimizing unintended consequences. We evaluate two major state policy changes that reflect different regulatory approaches: Florida's 2010 pill-mill crackdown and Washington's 2012 opioid prescribing guidelines.
+
+We construct a county--year panel from three sources: ARCOS shipment records (2006--2019), CDC Vital Statistics mortality records (2003--2015), and U.S. Census/IPUMS county population estimates (2000--2015). We focus on two outcomes:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Prescription opioid supply}: morphine milligram equivalents (MME) shipped per 1{,}000 residents (reported at the state level after aggregating counties and weighting by population).
+    \item \textbf{Mortality}: overdose deaths per 100{,}000 residents.
+\end{itemize}
+
+We estimate policy impacts using two complementary strategies:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Pre--post trends} to visualize changes in the treated state immediately after policy adoption.
+    \item \textbf{Difference-in-differences (DiD)} to compare the treated state to a set of control states chosen for geographic proximity and similar pre-policy trends.
+\end{enumerate}
+
+\textbf{Key findings (in plain language).}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Florida (2010).} Florida experienced a large and sustained decline in opioid shipments after 2010, and mortality also declined relative to nearby controls. In our preferred DiD specification, the average post-policy reduction in shipments is approximately \textbf{12.4 MME per 1{,}000 residents} relative to controls (Figure~\ref{fig:did-fl}).\footnote{DiD estimate taken from the updated plotting output shown in Figure~\ref{fig:did-fl}.}
+    \item \textbf{Washington (2012).} Washington shows smaller and less persistent improvements. Any post-2012 reduction in shipments is modest relative to the Florida case, and mortality does not exhibit a sustained decline relative to controls in later years (Figures~\ref{fig:prepost-wa}--\ref{fig:did-wa}).
+\end{itemize}
+
+Taken together, these results suggest that prescription-focused policies \emph{can} be associated with substantial reductions in shipped opioids (and, in Florida, a concurrent decline in mortality), but the magnitude and persistence of benefits appear to vary across policy designs and time periods. We interpret these findings cautiously and emphasize the role of external shocks (e.g., the rise of illicit fentanyl) and measurement constraints in the limitations section.
+
+% --------------------------------------------------
+% Background
+% --------------------------------------------------
+\section{Background and Motivation}
+
+State governments adopted diverse opioid policies over the 2000s and 2010s, including prescription drug monitoring programs (PDMPs), pain-clinic regulation, dosage thresholds, and prescribing guidelines. However, it is not guaranteed that reductions in prescription supply translate into reduced mortality: supply restrictions may reduce high-risk prescribing, but they may also coincide with shifts toward illicit opioids or change where harm occurs.
+
+We study two contrasting interventions:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Florida (2010):} a set of pill-mill regulations and enforcement actions targeted at high-volume pain clinics and physician dispensing.
+    \item \textbf{Washington (2012):} clinical prescribing guidelines intended to improve oversight and reduce high-risk prescribing.
+\end{itemize}
+
+Our research questions are:
+\begin{enumerate}[leftmargin=*]
+    \item Did each policy coincide with a reduction in opioid shipments (MME per 1{,}000 residents)?
+    \item Did each policy coincide with a reduction in overdose mortality (deaths per 100{,}000 residents)?
+    \item How do post-policy changes compare to changes in similar control states over the same period?
+\end{enumerate}
+
+% --------------------------------------------------
+% Data
+% --------------------------------------------------
+\section{Data and Measures}
+
+We harmonize three datasets to a common \textbf{county--year} unit using 5-digit county FIPS codes, then aggregate to state--year outcomes for visualization and DiD estimation.
+
+\textbf{ARCOS opioid shipments (supply).} ARCOS records controlled-substance shipments from manufacturers and distributors to registered entities (pharmacies, hospitals, and clinics). We convert opioid shipments to morphine milligram equivalents (MME) and standardize by population.
+
+\textbf{CDC Vital Statistics (mortality).} The CDC Multiple Cause of Death files provide annual counts of deaths and causes of death. We construct overdose mortality rates per 100{,}000 residents using the set of unintentional drug poisoning codes used in our project pipeline.
+
+\textbf{Population denominators.} County population estimates from U.S. Census/IPUMS provide annual denominators for per-capita measures.
+
+\textbf{Outcome scaling for readability.} For stakeholder readability, we report shipment intensity as \emph{MME per 1{,}000 residents} (rather than raw MME per person). Mortality is reported as deaths per 100{,}000 residents, a standard public-health scale.
+
+% --------------------------------------------------
+% Methods
+% --------------------------------------------------
+\section{Methodology}
+
+\subsection{Design overview}
+
+We use two approaches. First, \textbf{pre--post plots} summarize within-state changes around the policy year. Second, \textbf{DiD} compares the treated state to a set of control states that did not enact similar policy changes in the same period.
+
+\subsection{Control state selection}
+
+Controls were selected based on (i) geographic proximity, (ii) absence of overlapping state-level policy changes during the treatment window (to the extent observable in our course setting), and (iii) similarity of pre-policy trends in the outcomes:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Florida controls:} GA, AL, SC
+    \item \textbf{Washington controls:} OR, ID, CO
+\end{itemize}
+
+\subsection{Estimation}
+
+Our primary DiD estimand is the interaction between a treated-state indicator and a post-policy indicator. For transparency, the standard DiD regression specification is included in Appendix~\ref{app:did}.
+
+% --------------------------------------------------
+% Results
+% --------------------------------------------------
+\section{Results}
+
+\subsection{Florida: 2010 pill-mill crackdown}
+
+Figures~\ref{fig:prepost-fl} and~\ref{fig:did-fl} summarize Florida's outcomes. Visually, shipments decline sharply after 2010, while controls do not exhibit a comparable break. Mortality also declines relative to controls in the post-policy period, though effects appear smaller and noisier than shipments.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.48\linewidth}
+\centering
+\maybeincludegraphics[width=\linewidth]{figures/prepostshipmentsfl.png}
+\caption{Shipments (MME per 1{,}000 residents)}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\linewidth}
+\centering
+\maybeincludegraphics[width=\linewidth]{figures/prepostmortalityfl.png}
+\caption{Mortality (deaths per 100{,}000)}
+\end{subfigure}
+\caption{Florida pre--post trends around the 2010 policy year. \textit{(Replace the placeholder file names with your updated figure exports.)}}
+\label{fig:prepost-fl}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.48\linewidth}
+\centering
+\maybeincludegraphics[width=\linewidth]{figures/didshipmentsfl.png}
+\caption{Shipments DiD (FL vs GA/AL/SC)}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\linewidth}
+\centering
+\maybeincludegraphics[width=\linewidth]{figures/didmortalityfl.png}
+\caption{Mortality DiD (FL vs GA/AL/SC)}
+\end{subfigure}
+\caption{Difference-in-differences for Florida. The dashed line marks the 2010 policy year. The left panel uses the updated plot export included with this submission.}
+\label{fig:did-fl}
+\end{figure}
+
+\subsection{Washington: 2012 prescribing guidelines}
+
+Figures~\ref{fig:prepost-wa} and~\ref{fig:did-wa} summarize Washington. Relative to Florida, post-2012 changes appear smaller and less persistent: shipment reductions, where present, are modest, and mortality does not show a sustained decline relative to controls in later years.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.48\linewidth}
+\centering
+\maybeincludegraphics[width=\linewidth]{figures/prepostshipmentswa.png}
+\caption{Shipments (MME per 1{,}000 residents)}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\linewidth}
+\centering
+\maybeincludegraphics[width=\linewidth]{figures/prepostmortalitywa.png}
+\caption{Mortality (deaths per 100{,}000)}
+\end{subfigure}
+\caption{Washington pre--post trends around the 2012 policy year. \textit{(Replace the placeholder file names with your updated figure exports.)}}
+\label{fig:prepost-wa}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.48\linewidth}
+\centering
+\maybeincludegraphics[width=\linewidth]{figures/didshipmentswa.png}
+\caption{Shipments DiD (WA vs OR/ID/CO)}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\linewidth}
+\centering
+\maybeincludegraphics[width=\linewidth]{figures/didmortalitywa.png}
+\caption{Mortality DiD (WA vs OR/ID/CO)}
+\end{subfigure}
+\caption{Difference-in-differences for Washington. The dashed line marks the 2012 policy year. \textit{(Replace the placeholder file names with your updated figure exports.)}}
+\label{fig:did-wa}
+\end{figure}
+
+% --------------------------------------------------
+% Limitations
+% --------------------------------------------------
+\section{Limitations (stakeholder-relevant)}
+
+This section focuses on limitations that meaningfully affect how confident a stakeholder should be in the results.
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Outcome measurement is imperfect.} Mortality coding and suppression in small counties can introduce measurement error. Our approach (including backfill and population cutoffs described in Appendix~\ref{app:data}) may attenuate short-run variation and can bias estimates toward smaller effects.
+    \item \textbf{Concurrent shocks and illicit market dynamics.} The period we study includes large national shocks (changes in prescribing norms, enforcement, and the rise of illicit fentanyl). If those shocks affected treated and control states differently, they may confound DiD estimates.
+    \item \textbf{Policy and control-state comparability.} DiD relies on treated and control states following similar trends absent the policy. While our controls were selected to match pre-trends, we cannot guarantee no unobserved, state-specific changes coincided with policy adoption.
+\end{enumerate}
+
+% --------------------------------------------------
+% Conclusion
+% --------------------------------------------------
+\section{Conclusion and Policy Implications}
+
+Florida's 2010 intervention is associated with a sharp, sustained reduction in shipped opioids and a concurrent decline in overdose mortality relative to nearby controls. Washington's 2012 prescribing guidelines are associated with smaller and less persistent changes, and mortality does not exhibit a sustained decline relative to controls in later years.
+
+For stakeholders, the main takeaway is not that ``guidelines never work'' or that ``enforcement always works,'' but that observed impacts vary materially across settings and time periods. Prescription-focused interventions may be most effective when paired with complementary strategies that address illicit opioid dynamics and support harm reduction and treatment capacity. Future evaluation should incorporate more detailed policy coding, placebo tests, and alternative mortality definitions to strengthen causal interpretation.
+
+% --------------------------------------------------
+% Appendix
+% --------------------------------------------------
+\newpage
+\appendix
+
+\section{Data Construction Details}
+\label{app:data}
+
+This appendix contains technical detail that is useful for replication but not essential for a stakeholder-facing narrative.
+
+\subsection{Variable definitions}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Shipment intensity (MME per 1{,}000 residents):}
+    \[
+        \text{MME per 1{,}000} = \left(\frac{\text{Total MME shipped}}{\text{Population}}\right)\times 1{,}000.
+    \]
+    \item \textbf{Overdose mortality (deaths per 100{,}000 residents):}
+    \[
+        \text{Deaths per 100k} = \left(\frac{\text{Overdose deaths}}{\text{Population}}\right)\times 100{,}000.
+    \]
+\end{itemize}
+
+\subsection{Missingness, suppression, and backfill}
+County-year mortality counts can be suppressed for confidentiality in small counties. To avoid dropping large portions of the panel and to maintain continuous time series, we apply a conservative backfill rule: missing county-year outcomes are replaced with the most recent previously observed value for that county. We also explore population cutoffs to reduce the influence of highly suppressed counties.
+
+\subsection{Population cutoff and data loss figure}
+
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.48\linewidth}
+\centering
+\maybeincludegraphics[width=\linewidth]{figures/datadesc.png}
+
+\end{subfigure}\hfill
+\caption{Data Loss}
+
+
+\label{fig:prepost-fl}
+\end{figure}
+
+\section{Difference-in-Differences Specification}
+\label{app:did}
+
+For transparency, our DiD regression can be written as:
+\[
+y_{st} = \alpha_s + \gamma_t + \beta \left(\text{Treated}_s \times \text{Post}_t\right) + \varepsilon_{st},
+\]
+where $y_{st}$ is the state-year outcome (shipments or mortality), $\alpha_s$ are state fixed effects, $\gamma_t$ are year fixed effects, and $\beta$ is the DiD estimate of the post-policy change in the treated state relative to controls.
+
+\section{References}
+
+\begin{itemize}[leftmargin=*]
+    \item ARCOS shipment data: public release via Washington Post FOIA repository.
+    \item CDC Multiple Cause of Death / Vital Statistics (MCOD), 2003--2015.
+    \item U.S. Census / IPUMS NHGIS county population estimates, 2000--2015.
+\end{itemize}
+
+\end{document}
